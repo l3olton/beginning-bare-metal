@@ -1,0 +1,34 @@
+[
+  {
+    "file": "main.c",
+    "arguments": [
+      "/usr/bin/arm-none-eabi-gcc",
+      "main.c",
+      "-W",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wundef",
+      "-Wshadow",
+      "-Wdouble-promotion",
+      "-Wformat-truncation",
+      "-fno-common",
+      "-Wconversion",
+      "-g3",
+      "-Os",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-I.",
+      "-mcpu=cortex-m4",
+      "-mthumb",
+      "-mfloat-abi=hard",
+      "-mfpu=fpv4-sp-d16",
+      "-Tlink.ld",
+      "--specs",
+      "-o",
+      "firmware.elf"
+    ],
+    "directory": "/home/tb/Documents/embedded/beginning-bare-metal",
+    "output": "firmware.elf"
+  }
+]
