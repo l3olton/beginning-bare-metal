@@ -11,9 +11,9 @@ struct gpio {
 };
 #define GPIO(bank) ((struct gpio *) (0x40020000 + 0x400 * (bank)))
 
-enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG };
+typedef enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG } GpioMode ;
 
-static inline void gpio_set_mode(uint16_t pin, uint8_t mode) {
+static inline void gpio_set_mode(uint16_t pin, GpioMode mode) { // TODO: use enum type?
     struct gpio *gpio = GPIO(PINBANK(pin));
     int n = PINNO(pin);
     gpio->MODER &= ~(3U << (n * 2));
