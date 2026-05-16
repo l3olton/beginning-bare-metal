@@ -6,22 +6,22 @@
 #define PINNO(pin) (pin & 255)
 #define PINBANK(pin) (pin >> 8)
 
-struct gpio {
+struct Gpio {
     volatile uint32_t MODER, OTYPER, OSPEEDR, PUPDR, IDR, ODR, BSRR, LCKR, AFR[2];
 };
-#define GPIO(bank) ((struct gpio *) (0x40020000 + 0x400 * (bank)))
+#define GPIO(bank) ((struct Gpio *) (0x40020000 + 0x400 * (bank)))
 
 typedef enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG } GpioMode ;
 
 static inline void gpio_set_mode(uint16_t pin, GpioMode mode) { // TODO: use enum type?
-    struct gpio *gpio = GPIO(PINBANK(pin));
+    struct Gpio *gpio = GPIO(PINBANK(pin));
     int n = PINNO(pin);
     gpio->MODER &= ~(3U << (n * 2));
     gpio->MODER |= (mode & 3U) << (n * 2);
 }
 
 static inline void gpio_write(uint16_t pin, bool val) {
-    struct gpio *gpio = GPIO(PINBANK(pin));
+    struct Gpio *gpio = GPIO(PINBANK(pin));
     gpio->BSRR = (1U << PINNO(pin)) << (val ? 0 : 16);
 }
 
@@ -29,14 +29,14 @@ static inline void spin(volatile uint32_t count) {
     while (count--) (void) 0;
 }
 
-struct rcc {
+struct Rcc {
     volatile uint32_t CR, PLLCFGR, CFGR, CIR, AHB1RSTR, AHB2RSTR, AHB3RSTR,
         RESERVED0, APB1RSTR, APB2RSTR, RESERVED1[2], AHB1ENR, AHB2ENR, AHB3ENR,
         RESERVED2, APB1ENR, APB2ENR, RESERVED3[2], AHB1LPENR, AHB2LPENR,
         AHB3LPENR, RESERVED4, APB1LPENR, APB2LPENR, RESERVED5[2], BDCR, CSR,
         RESERVED6[2], SSCGR, PLLI2SCFGR;
 };
-#define RCC ((struct rcc *) 0x40023800)
+#define RCC ((struct Rcc *) 0x40023800)
 
 int main(void) {
     uint16_t blue = PIN('B', 7);
