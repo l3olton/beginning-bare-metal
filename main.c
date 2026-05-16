@@ -17,7 +17,7 @@ static inline void gpio_set_mode(uint16_t pin, uint8_t mode) {
     struct gpio *gpio = GPIO(PINBANK(pin));
     int n = PINNO(pin);
     gpio->MODER &= ~(3U << (n * 2));
-    gpio->MODER |= (mode & 3) << (n * 2);
+    gpio->MODER |= (mode & 3U) << (n * 2);
 }
 
 static inline void gpio_write(uint16_t pin, bool val) {
