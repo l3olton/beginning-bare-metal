@@ -38,6 +38,34 @@ struct Rcc {
 };
 #define RCC ((struct Rcc *) 0x40023800)
 
+struct SysTick {
+    volatile uint32_t CTRL, LOAD, VAL, CALIB;
+};
+#define SYSTICK ((struct SysTick *) 0xe000e010)
+
+static inline void systick_init(uint32_t ticks) {
+    if ((ticks - 1) > 0xffffff) return; // limit value to 24-bit, systick timer is 24-bit counter
+    SYSTICK->LOAD = ticks - 1; // value to countdown from
+    SYSTICK->VAL = 0;
+    SYSTICK->CTRL = BIT(0) // set bit 0 to enable the counter
+        | BIT(1) // set bit 1 to enable interrupt when counter reaches 0
+        | BIT(2); // set bit 2 to use system clock
+    RCC->APB2ENR |= BIT(14); // enable system configuration controller clock (SYSCFGEN)
+}
+
+static volatile uint32_t s_ticks;
+void SysTick_Handler(void) {
+    s_ticks++;
+}
+
+bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
+  if (now + prd < *t) *t = 0;                    // Time wrapped? Reset timer
+  if (*t == 0) *t = now + prd;                   // First poll? Set expiration
+  if (*t > now) return false;                    // Not expired yet, return
+  *t = (now - *t) > prd ? now + prd : *t + prd;  // Next expiration time
+  return true;                                   // Expired, return true
+}
+
 int main(void) {
     uint16_t blue = PIN('B', 7);
     uint16_t green = PIN('B', 0);
@@ -52,20 +80,37 @@ int main(void) {
     RCC->AHB1ENR |= BIT(PINBANK(red));
     gpio_set_mode(red, GPIO_MODE_OUTPUT);
 
+    systick_init(16000000 / 1000);
+
+    uint32_t red_timer = 0;
+    uint32_t period_250_ms = 500;
+
+    uint32_t blue_timer = 0;
+    uint32_t period_500_ms = 600;
+
+    uint32_t green_timer = 0;
+    uint32_t period_750_ms = 700;
+
     for (;;) {
-        gpio_write(red, true);
-        spin(799999);
-        gpio_write(blue, true);
-        spin(799999);
-        gpio_write(green, true);
-        spin(799999);
-        gpio_write(red, false);
-        spin(799999);
-        gpio_write(blue, false);
-        spin(799999);
-        gpio_write(green, false);
-        spin(799999);
-    };
+        if (timer_expired(&red_timer, period_250_ms, s_ticks)) {
+            static bool on;
+            gpio_write(red, on);
+            on = !on;
+        }
+
+        if (timer_expired(&blue_timer, period_500_ms, s_ticks)) {
+            static bool on;
+            gpio_write(blue, on);
+            on = !on;
+        }
+
+        if (timer_expired(&green_timer, period_750_ms, s_ticks)) {
+            static bool on;
+            gpio_write(green, on);
+            on = !on;
+        }
+    }
+
     return 0;
 }
 
@@ -81,5 +126,5 @@ __attribute__((naked, noreturn)) void _reset(void) {
 extern void _estack(void);
 
 __attribute__((section(".vectors"))) void (*const tab[16 + 91])(void) = {
-    _estack, _reset
+    _estack, _reset, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, SysTick_Handler
 };
