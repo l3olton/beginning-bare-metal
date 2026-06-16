@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -10,24 +11,6 @@ struct Gpio {
     volatile uint32_t MODER, OTYPER, OSPEEDR, PUPDR, IDR, ODR, BSRR, LCKR, AFR[2];
 };
 #define GPIO(bank) ((struct Gpio *) (0x40020000 + 0x400 * (bank)))
-
-typedef enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG } GpioMode ;
-
-static inline void gpio_set_mode(uint16_t pin, GpioMode mode) {
-    struct Gpio *gpio = GPIO(PINBANK(pin));
-    int n = PINNO(pin);
-    gpio->MODER &= ~(3U << (n * 2));
-    gpio->MODER |= (mode & 3U) << (n * 2);
-}
-
-static inline void gpio_write(uint16_t pin, bool val) {
-    struct Gpio *gpio = GPIO(PINBANK(pin));
-    gpio->BSRR = (1U << PINNO(pin)) << (val ? 0 : 16);
-}
-
-static inline void spin(volatile uint32_t count) {
-    while (count--) (void) 0;
-}
 
 struct Rcc {
     volatile uint32_t CR, PLLCFGR, CFGR, CIR, AHB1RSTR, AHB2RSTR, AHB3RSTR,
@@ -42,6 +25,91 @@ struct SysTick {
     volatile uint32_t CTRL, LOAD, VAL, CALIB;
 };
 #define SYSTICK ((struct SysTick *) 0xe000e010)
+
+struct Usart {
+    uint32_t SR, DR, BRR, CR1, CR2, CR3, GTPR;
+};
+#define USART1 ((struct Usart *) 0x40011000)
+#define USART2 ((struct Usart *) 0x40004400)
+#define USART3 ((struct Usart *) 0x40004800)
+
+#define FREQ 16000000 // CPU frequency 16Mhz
+
+typedef enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG } GpioMode;
+
+static inline void spin(volatile uint32_t count) {
+  while (count--) (void) 0;
+}
+
+static inline void gpio_set_mode(uint16_t pin, GpioMode mode) {
+    struct Gpio *gpio = GPIO(PINBANK(pin));
+    int n = PINNO(pin);
+    RCC->AHB1ENR |= BIT(PINBANK(n)); // enable clock for pin
+    gpio->MODER &= ~(3U << (n * 2)); // clear mode register
+    gpio->MODER |= (mode & 3U) << (n * 2); // set mode register
+}
+
+static inline void gpio_write(uint16_t pin, bool val) {
+    struct Gpio *gpio = GPIO(PINBANK(pin));
+    gpio->BSRR = (1U << PINNO(pin)) << (val ? 0 : 16);
+}
+
+static inline void gpio_set_af(uint16_t pin, uint8_t af_num) {
+    struct Gpio *gpio = GPIO(PINBANK(pin));
+    int n = PINNO(pin);
+    gpio->AFR[n >> 3] &= ~(15UL << ((n & 7) * 4)); // clearing AFR bits (?)
+    gpio->AFR[n >> 3] |= ((uint32_t) af_num) << ((n & 7) * 4); // setting AFR bits
+}
+
+static inline void usart_init(struct Usart *usart, unsigned long baud) {
+    uint8_t af = 7;
+    uint16_t rx = 0, tx = 0;
+
+    if (usart == USART1) {
+        RCC->APB2ENR |= BIT(4); // enable clock for this usart
+        tx = PIN('A', 9); // select transmission pin
+        rx = PIN('A', 10); // select receiving pin
+    } else if (usart == USART2) {
+        RCC->APB1ENR |= BIT(17);
+        tx = PIN('A', 2);
+        rx = PIN('A', 3);
+    } else if (usart == USART3) {
+        RCC->APB1ENR |= BIT(18);
+        tx = PIN('D', 8);
+        rx = PIN('D', 9);
+    } else {
+        return; // TODO: maybe handle differently
+    }
+
+    RCC->AHB1ENR |= BIT(PINBANK(tx)); // TODO: shouldn't be needed (handled in gpio_set_mode)
+    gpio_set_mode(tx, GPIO_MODE_AF);
+    gpio_set_af(tx, af);
+    RCC->AHB1ENR |= BIT(PINBANK(rx)); // TODO: shouldn't be needed (handled in gpio_set_mode)
+    gpio_set_mode(rx, GPIO_MODE_AF);
+    gpio_set_af(rx, af);
+
+    usart->CR1 = 0; // disable this usart
+    usart->BRR = FREQ / baud; // set baud rate
+    usart->CR1 |= BIT(13) | BIT(3) | BIT(2); // enable usart, transmit and recieve
+}
+
+static inline int usart_read_ready(struct Usart *usart) {
+    return usart->SR & BIT(5); // if RXNE bit is set, data is ready to read
+}
+
+static inline uint8_t usart_read_byte(struct Usart *usart) {
+    return (uint8_t) (usart->DR & 255); // bottom 8 bits of DR register hold received value
+}
+
+static inline void usart_write_byte(struct Usart *usart, uint8_t data) {
+    usart->DR = data;
+    while ((usart->SR & BIT(6)) == 0) spin(1); // delay if TC (transmission complete) bit is not set
+}
+
+// TODO: characters are not printed in order
+static inline void usart_write_buffer(struct Usart *usart, char *buffer, size_t len) {
+    while (len-- > 0) usart_write_byte(usart, *(uint8_t *) buffer++);
+}
 
 static inline void systick_init(uint32_t ticks) {
     if ((ticks - 1) > 0xffffff) return; // limit value to 24-bit, systick timer is 24-bit counter
@@ -67,17 +135,19 @@ bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
 }
 
 int main(void) {
+    usart_init(USART3, 115200); // TODO: why this baud value?
+
     uint16_t blue = PIN('B', 7);
     uint16_t green = PIN('B', 0);
     uint16_t red = PIN('B', 14);
 
-    RCC->AHB1ENR |= BIT(PINBANK(blue));
+    RCC->AHB1ENR |= BIT(PINBANK(blue)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(blue, GPIO_MODE_OUTPUT);
 
-    RCC->AHB1ENR |= BIT(PINBANK(green));
+    RCC->AHB1ENR |= BIT(PINBANK(green)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(green, GPIO_MODE_OUTPUT);
 
-    RCC->AHB1ENR |= BIT(PINBANK(red));
+    RCC->AHB1ENR |= BIT(PINBANK(red)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(red, GPIO_MODE_OUTPUT);
 
     systick_init(16000000 / 1000);
@@ -96,6 +166,7 @@ int main(void) {
             static bool on;
             gpio_write(red, on);
             on = !on;
+            usart_write_buffer(USART3, "hello\n", 6);
         }
 
         if (timer_expired(&blue_timer, period_500_ms, s_ticks)) {
