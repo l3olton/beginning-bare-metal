@@ -148,8 +148,6 @@ void blinkies(void) {
     RCC->AHB1ENR |= BIT(PINBANK(red)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(red, GPIO_MODE_OUTPUT);
 
-    systick_init(16000000 / 1000);
-
     uint32_t red_timer = 0;
     uint32_t period_250_ms = 500;
 
@@ -181,6 +179,8 @@ void blinkies(void) {
 }
 
 int main(void) {
+    systick_init(16000000 / 1000);
+
     usart_init(USART3, 115200); // TODO: why this baud value?
 
     blinkies();
