@@ -134,9 +134,7 @@ bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
   return true;                                   // Expired, return true
 }
 
-int main(void) {
-    usart_init(USART3, 115200); // TODO: why this baud value?
-
+void blinkies(void) {
     uint16_t blue = PIN('B', 7);
     uint16_t green = PIN('B', 0);
     uint16_t red = PIN('B', 14);
@@ -166,7 +164,6 @@ int main(void) {
             static bool on;
             gpio_write(red, on);
             on = !on;
-            usart_write_buffer(USART3, "hello\n", 6);
         }
 
         if (timer_expired(&blue_timer, period_500_ms, s_ticks)) {
@@ -181,6 +178,12 @@ int main(void) {
             on = !on;
         }
     }
+}
+
+int main(void) {
+    usart_init(USART3, 115200); // TODO: why this baud value?
+
+    blinkies();
 
     return 0;
 }
