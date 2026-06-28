@@ -46,7 +46,7 @@ static inline void spin(volatile uint32_t count) {
 static inline void gpio_set_mode(uint16_t pin, GpioMode mode) {
     struct Gpio *gpio = GPIO(PINBANK(pin));
     int n = PINNO(pin);
-    RCC->AHB1ENR |= BIT(PINBANK(n)); // enable clock for pin
+    RCC->AHB1ENR |= BIT(PINBANK(pin)); // enable clock for pin
     gpio->MODER &= ~(3U << (n * 2)); // clear mode register
     gpio->MODER |= (mode & 3U) << (n * 2); // set mode register
 }
@@ -83,10 +83,8 @@ static inline void usart_init(struct Usart *usart, unsigned long usart_div) {
         return; // TODO: maybe handle differently
     }
 
-    RCC->AHB1ENR |= BIT(PINBANK(tx)); // TODO: shouldn't be needed (handled in gpio_set_mode)
     gpio_set_mode(tx, GPIO_MODE_AF);
     gpio_set_af(tx, af);
-    RCC->AHB1ENR |= BIT(PINBANK(rx)); // TODO: shouldn't be needed (handled in gpio_set_mode)
     gpio_set_mode(rx, GPIO_MODE_AF);
     gpio_set_af(rx, af);
 
@@ -141,13 +139,10 @@ void blinkies(void) {
     uint16_t green = PIN('B', 0);
     uint16_t red = PIN('B', 14);
 
-    RCC->AHB1ENR |= BIT(PINBANK(blue)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(blue, GPIO_MODE_OUTPUT);
 
-    RCC->AHB1ENR |= BIT(PINBANK(green)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(green, GPIO_MODE_OUTPUT);
 
-    RCC->AHB1ENR |= BIT(PINBANK(red)); // TODO: shouldn't be needed (set in gpio_set_mode)
     gpio_set_mode(red, GPIO_MODE_OUTPUT);
 
     uint32_t red_timer = 0;
