@@ -33,6 +33,8 @@ struct Usart {
 #define USART2 ((struct Usart *) 0x40004400)
 #define USART3 ((struct Usart *) 0x40004800)
 
+#define USART_SR_TC BIT(6)
+
 #define FREQ 16000000 // CPU frequency 16Mhz
 
 typedef enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG } GpioMode;
@@ -61,7 +63,7 @@ static inline void gpio_set_af(uint16_t pin, uint8_t af_num) {
     gpio->AFR[n >> 3] |= ((uint32_t) af_num) << ((n & 7) * 4); // setting AFR bits
 }
 
-static inline void usart_init(struct Usart *usart, unsigned long baud) {
+static inline void usart_init(struct Usart *usart, unsigned long usart_div) {
     uint8_t af = 7;
     uint16_t rx = 0, tx = 0;
 
@@ -88,9 +90,10 @@ static inline void usart_init(struct Usart *usart, unsigned long baud) {
     gpio_set_mode(rx, GPIO_MODE_AF);
     gpio_set_af(rx, af);
 
-    usart->CR1 = 0; // disable this usart
-    usart->BRR = FREQ / baud; // set baud rate
-    usart->CR1 |= BIT(13) | BIT(3) | BIT(2); // enable usart, transmit and recieve
+    usart->CR1 &= ~BIT(12) & ~BIT(15); // set data length to 8 bits and OVER8 to 0 (oversample by 16 bits)
+    usart->CR2 &= ~BIT(12) & ~BIT(13); // set no. of stop bits to 1
+    usart->BRR = usart_div;
+    usart->CR1 |= BIT(13) | BIT(3); // enable USART and set TE (transmitter enable) bit to send an idle frame as first transmission
 }
 
 static inline int usart_read_ready(struct Usart *usart) {
@@ -102,11 +105,10 @@ static inline uint8_t usart_read_byte(struct Usart *usart) {
 }
 
 static inline void usart_write_byte(struct Usart *usart, uint8_t data) {
+    while (!(usart->SR & USART_SR_TC));
     usart->DR = data;
-    while ((usart->SR & BIT(6)) == 0) spin(1); // delay if TC (transmission complete) bit is not set
 }
 
-// TODO: characters are not printed in order
 static inline void usart_write_buffer(struct Usart *usart, char *buffer, size_t len) {
     while (len-- > 0) usart_write_byte(usart, *(uint8_t *) buffer++);
 }
@@ -181,9 +183,21 @@ void blinkies(void) {
 int main(void) {
     systick_init(16000000 / 1000);
 
-    usart_init(USART3, 115200); // TODO: why this baud value?
+    // usart_init(USART3, 0x008B); // divider for 115200 baud rate
+    usart_init(USART3, 0x0683); // divider for 9600 baud rate
 
-    blinkies();
+    usart_write_buffer(USART3, "Hello World\n", 12);
+
+    uint32_t usart_timer = 0;
+    uint32_t period = 1000;
+
+    for (;;) {
+        if (timer_expired(&usart_timer, period, s_ticks)) {
+            usart_write_buffer(USART3, "abc\n", 4);
+        }
+    }
+
+    // blinkies();
 
     return 0;
 }
