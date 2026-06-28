@@ -27,7 +27,7 @@ struct SysTick {
 #define SYSTICK ((struct SysTick *) 0xe000e010)
 
 struct Usart {
-    uint32_t SR, DR, BRR, CR1, CR2, CR3, GTPR;
+    volatile uint32_t SR, DR, BRR, CR1, CR2, CR3, GTPR;
 };
 #define USART1 ((struct Usart *) 0x40011000)
 #define USART2 ((struct Usart *) 0x40004400)
