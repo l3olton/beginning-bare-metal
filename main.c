@@ -43,6 +43,7 @@ static inline void spin(volatile uint32_t count) {
   while (count--) (void) 0;
 }
 
+// TODO: possibly rewrite
 static inline void gpio_set_mode(uint16_t pin, GpioMode mode) {
     struct Gpio *gpio = GPIO(PINBANK(pin));
     int n = PINNO(pin);
@@ -51,11 +52,13 @@ static inline void gpio_set_mode(uint16_t pin, GpioMode mode) {
     gpio->MODER |= (mode & 3U) << (n * 2); // set mode register
 }
 
+// TODO: possibly rewrite
 static inline void gpio_write(uint16_t pin, bool val) {
     struct Gpio *gpio = GPIO(PINBANK(pin));
     gpio->BSRR = (1U << PINNO(pin)) << (val ? 0 : 16);
 }
 
+// TODO: possibly rewrite
 static inline void gpio_set_af(uint16_t pin, uint8_t af_num) {
     struct Gpio *gpio = GPIO(PINBANK(pin));
     int n = PINNO(pin);
