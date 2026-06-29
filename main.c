@@ -119,6 +119,7 @@ static inline void usart_write_buffer(struct Usart *usart, char *buffer, size_t 
     while (len-- > 0) usart_write_byte(usart, *(uint8_t *) buffer++);
 }
 
+// TODO: macros for bits
 static inline void systick_init(uint32_t ticks) {
     if ((ticks - 1) > 0xffffff) return; // limit value to 24-bit, systick timer is 24-bit counter
     SYSTICK->LOAD = ticks - 1; // value to countdown from
