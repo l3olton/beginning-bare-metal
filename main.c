@@ -163,7 +163,7 @@ void blinkies(void) {
     uint32_t green_timer = 0;
     uint32_t period_750_ms = 700;
 
-    for (;;) {
+    while(1) {
         if (timer_expired(&red_timer, period_250_ms, s_ticks)) {
             static bool on;
             gpio_write(red, on);
@@ -195,7 +195,7 @@ int main(void) {
     uint32_t usart_timer = 0;
     uint32_t period = 1000;
 
-    for (;;) {
+    while(1) {
         if (timer_expired(&usart_timer, period, s_ticks)) {
             usart_write_buffer(USART3, "لا إله إلا الله\n", 28);
         }
@@ -212,7 +212,7 @@ __attribute__((naked, noreturn)) void _reset(void) {
     for (long *dst = &_sdata, *src = &_sidata; dst < &_edata;) *dst++ = *src++;
 
     main();
-    for (;;) (void) 0;
+    while (1) (void) 0;
 }
 
 extern void _estack(void);
