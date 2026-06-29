@@ -190,14 +190,14 @@ int main(void) {
     // usart_init(USART3, 0x008B); // divider for 115200 baud rate
     usart_init(USART3, 0x0683); // divider for 9600 baud rate
 
-    usart_write_buffer(USART3, "Hello World\n", 12);
+    usart_write_buffer(USART3, "بسم الله\n", 16);
 
     uint32_t usart_timer = 0;
     uint32_t period = 1000;
 
     for (;;) {
         if (timer_expired(&usart_timer, period, s_ticks)) {
-            usart_write_buffer(USART3, "abc\n", 4);
+            usart_write_buffer(USART3, "لا إله إلا الله\n", 28);
         }
     }
 
