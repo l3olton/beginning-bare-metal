@@ -33,7 +33,12 @@ struct Usart {
 #define USART2 ((struct Usart *) 0x40004400)
 #define USART3 ((struct Usart *) 0x40004800)
 
-#define USART_SR_TC BIT(6)
+#define USART1_CLOCK_ENABLE BIT(4)
+#define USART2_CLOCK_ENABLE BIT(17)
+#define USART3_CLOCK_ENABLE BIT(18)
+#define USART_ENABLE BIT(13)
+#define USART_TRANSMITTER_ENABLE BIT(3)
+#define USART_TRANSMISSION_COMPLETE BIT(6)
 
 #define FREQ 16000000 // CPU frequency 16Mhz
 
@@ -71,15 +76,15 @@ static inline void usart_init(struct Usart *usart, unsigned long usart_div) {
     uint16_t rx = 0, tx = 0;
 
     if (usart == USART1) {
-        RCC->APB2ENR |= BIT(4); // enable clock for this usart
+        RCC->APB2ENR |= USART1_CLOCK_ENABLE;
         tx = PIN('A', 9); // select transmission pin
         rx = PIN('A', 10); // select receiving pin
     } else if (usart == USART2) {
-        RCC->APB1ENR |= BIT(17);
+        RCC->APB1ENR |= USART2_CLOCK_ENABLE;
         tx = PIN('A', 2);
         rx = PIN('A', 3);
     } else if (usart == USART3) {
-        RCC->APB1ENR |= BIT(18);
+        RCC->APB1ENR |= USART3_CLOCK_ENABLE;
         tx = PIN('D', 8);
         rx = PIN('D', 9);
     } else {
@@ -94,7 +99,7 @@ static inline void usart_init(struct Usart *usart, unsigned long usart_div) {
     usart->CR1 &= ~BIT(12) & ~BIT(15); // set data length to 8 bits and OVER8 to 0 (oversample by 16 bits)
     usart->CR2 &= ~BIT(12) & ~BIT(13); // set no. of stop bits to 1
     usart->BRR = usart_div;
-    usart->CR1 |= BIT(13) | BIT(3); // enable USART and set TE (transmitter enable) bit to send an idle frame as first transmission
+    usart->CR1 |= USART_ENABLE | USART_TRANSMITTER_ENABLE;
 }
 
 static inline int usart_read_ready(struct Usart *usart) {
@@ -106,7 +111,7 @@ static inline uint8_t usart_read_byte(struct Usart *usart) {
 }
 
 static inline void usart_write_byte(struct Usart *usart, uint8_t data) {
-    while (!(usart->SR & USART_SR_TC));
+    while (!(usart->SR & USART_TRANSMISSION_COMPLETE));
     usart->DR = data;
 }
 
