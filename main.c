@@ -147,43 +147,6 @@ bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
   return true;                                   // Expired, return true
 }
 
-void blinkies(void) {
-    gpio_set_mode(BLUE_LED_PIN, GPIO_MODE_OUTPUT);
-
-    gpio_set_mode(GREEN_LED_PIN, GPIO_MODE_OUTPUT);
-
-    gpio_set_mode(RED_LED_PIN, GPIO_MODE_OUTPUT);
-
-    uint32_t red_timer = 0;
-    uint32_t period_250_ms = 500;
-
-    uint32_t blue_timer = 0;
-    uint32_t period_500_ms = 600;
-
-    uint32_t green_timer = 0;
-    uint32_t period_750_ms = 700;
-
-    while (1) {
-        if (timer_expired(&red_timer, period_250_ms, s_ticks)) {
-            static bool on;
-            gpio_write(RED_LED_PIN, on);
-            on = !on;
-        }
-
-        if (timer_expired(&blue_timer, period_500_ms, s_ticks)) {
-            static bool on;
-            gpio_write(BLUE_LED_PIN, on);
-            on = !on;
-        }
-
-        if (timer_expired(&green_timer, period_750_ms, s_ticks)) {
-            static bool on;
-            gpio_write(GREEN_LED_PIN, on);
-            on = !on;
-        }
-    }
-}
-
 int main(void) {
     systick_init(16000000 / 1000);
 
@@ -192,16 +155,34 @@ int main(void) {
 
     usart_write_buffer(USART3, "بسم الله\n", 16);
 
+    gpio_set_mode(BLUE_LED_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_mode(GREEN_LED_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_mode(RED_LED_PIN, GPIO_MODE_OUTPUT);
+
+    uint32_t led_timer = 0;
     uint32_t usart_timer = 0;
-    uint32_t period = 1000;
+    uint32_t delay = 0;
 
     while (1) {
-        if (timer_expired(&usart_timer, period, s_ticks)) {
+        if (timer_expired(&led_timer, 1500, s_ticks)) {
+            gpio_write(RED_LED_PIN, 1);
+            while (!timer_expired(&delay, 250, s_ticks));
+            gpio_write(BLUE_LED_PIN, 1);
+            while (!timer_expired(&delay, 250, s_ticks));
+            gpio_write(GREEN_LED_PIN, 1);
+            while (!timer_expired(&delay, 250, s_ticks));
+            gpio_write(RED_LED_PIN, 0);
+            while (!timer_expired(&delay, 250, s_ticks));
+            gpio_write(BLUE_LED_PIN, 0);
+            while (!timer_expired(&delay, 250, s_ticks));
+            gpio_write(GREEN_LED_PIN, 0);
+            while (!timer_expired(&delay, 250, s_ticks));
+        }
+
+        if (timer_expired(&usart_timer, 1000, s_ticks)) {
             usart_write_buffer(USART3, "لا إله إلا الله\n", 28);
         }
     }
-
-    // blinkies();
 
     return 0;
 }
