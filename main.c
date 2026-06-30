@@ -146,6 +146,7 @@ bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
   *t = (now - *t) > prd ? now + prd : *t + prd;  // Next expiration time
   return true;                                   // Expired, return true
 }
+#define DELAY(ms) while (!timer_expired(&delay, ms, s_ticks))
 
 int main(void) {
     systick_init(16000000 / 1000);
@@ -166,17 +167,17 @@ int main(void) {
     while (1) {
         if (timer_expired(&led_timer, 1500, s_ticks)) {
             gpio_write(RED_LED_PIN, 1);
-            while (!timer_expired(&delay, 250, s_ticks));
+            DELAY(250);
             gpio_write(BLUE_LED_PIN, 1);
-            while (!timer_expired(&delay, 250, s_ticks));
+            DELAY(250);
             gpio_write(GREEN_LED_PIN, 1);
-            while (!timer_expired(&delay, 250, s_ticks));
+            DELAY(250);
             gpio_write(RED_LED_PIN, 0);
-            while (!timer_expired(&delay, 250, s_ticks));
+            DELAY(250);
             gpio_write(BLUE_LED_PIN, 0);
-            while (!timer_expired(&delay, 250, s_ticks));
+            DELAY(250);
             gpio_write(GREEN_LED_PIN, 0);
-            while (!timer_expired(&delay, 250, s_ticks));
+            DELAY(250);
         }
 
         if (timer_expired(&usart_timer, 1000, s_ticks)) {
