@@ -7,6 +7,10 @@
 #define PINNO(pin) (pin & 255)
 #define PINBANK(pin) (pin >> 8)
 
+#define BLUE_LED_PIN PIN('B', 7)
+#define GREEN_LED_PIN PIN('B', 0)
+#define RED_LED_PIN PIN('B', 14)
+
 struct Gpio {
     volatile uint32_t MODER, OTYPER, OSPEEDR, PUPDR, IDR, ODR, BSRR, LCKR, AFR[2];
 };
@@ -144,15 +148,11 @@ bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
 }
 
 void blinkies(void) {
-    uint16_t blue = PIN('B', 7);
-    uint16_t green = PIN('B', 0);
-    uint16_t red = PIN('B', 14);
+    gpio_set_mode(BLUE_LED_PIN, GPIO_MODE_OUTPUT);
 
-    gpio_set_mode(blue, GPIO_MODE_OUTPUT);
+    gpio_set_mode(GREEN_LED_PIN, GPIO_MODE_OUTPUT);
 
-    gpio_set_mode(green, GPIO_MODE_OUTPUT);
-
-    gpio_set_mode(red, GPIO_MODE_OUTPUT);
+    gpio_set_mode(RED_LED_PIN, GPIO_MODE_OUTPUT);
 
     uint32_t red_timer = 0;
     uint32_t period_250_ms = 500;
@@ -166,19 +166,19 @@ void blinkies(void) {
     while (1) {
         if (timer_expired(&red_timer, period_250_ms, s_ticks)) {
             static bool on;
-            gpio_write(red, on);
+            gpio_write(RED_LED_PIN, on);
             on = !on;
         }
 
         if (timer_expired(&blue_timer, period_500_ms, s_ticks)) {
             static bool on;
-            gpio_write(blue, on);
+            gpio_write(BLUE_LED_PIN, on);
             on = !on;
         }
 
         if (timer_expired(&green_timer, period_750_ms, s_ticks)) {
             static bool on;
-            gpio_write(green, on);
+            gpio_write(GREEN_LED_PIN, on);
             on = !on;
         }
     }
