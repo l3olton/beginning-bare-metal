@@ -24,8 +24,6 @@
       "-mfloat-abi=hard",
       "-mfpu=fpv4-sp-d16",
       "-Tlink.ld",
-      "--specs",
-      "-o",
       "firmware.elf"
     ],
     "directory": "/home/tb/Documents/embedded/beginning-bare-metal",
