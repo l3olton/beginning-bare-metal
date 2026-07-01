@@ -1,46 +1,11 @@
 #include "gpio.h"
 #include "usart.h"
-#include "rcc.h"
-#include "utils.h"
+#include "systick.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-struct SysTick {
-    volatile uint32_t CTRL, LOAD, VAL, CALIB;
-};
-#define SYSTICK ((struct SysTick *) 0xe000e010)
-
 #define FREQ 16000000 // CPU frequency 16Mhz
-
-static inline void spin(volatile uint32_t count) {
-  while (count--) (void) 0;
-}
-
-// TODO: macros for bits
-static inline void systick_init(uint32_t ticks) {
-    if ((ticks - 1) > 0xffffff) return; // limit value to 24-bit, systick timer is 24-bit counter
-    SYSTICK->LOAD = ticks - 1; // value to countdown from
-    SYSTICK->VAL = 0;
-    SYSTICK->CTRL = BIT(0) // set bit 0 to enable the counter
-        | BIT(1) // set bit 1 to enable interrupt when counter reaches 0
-        | BIT(2); // set bit 2 to use system clock
-    RCC->APB2ENR |= BIT(14); // enable system configuration controller clock (SYSCFGEN)
-}
-
-static volatile uint32_t s_ticks;
-void SysTick_Handler(void) {
-    s_ticks++;
-}
-
-bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
-  if (now + prd < *t) *t = 0;                    // Time wrapped? Reset timer
-  if (*t == 0) *t = now + prd;                   // First poll? Set expiration
-  if (*t > now) return false;                    // Not expired yet, return
-  *t = (now - *t) > prd ? now + prd : *t + prd;  // Next expiration time
-  return true;                                   // Expired, return true
-}
-#define DELAY(timer, ms) while (!timer_expired(&timer, ms, s_ticks))
 
 int main(void) {
     systick_init(16000000 / 1000);
